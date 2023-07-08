@@ -1,12 +1,15 @@
 require('dotenv').config();var axios = require('axios');
-const apiDomain = process.env.API_BING
-const auth = process.env.AUTH_BING
+const bingDomain = process.env.API_BING
+const authBing = process.env.AUTH_BING
+const ocdDomain = process.env.API_OCD
+const authOcd = process.env.AUTH_OCD
 const success = 200
 const notFound = 404
 const serverError = 500
 const badGateway = 502
 
 const getImages = createDataFetcher(
+    'bing',
     'images',
     'Erro ao efetuar busca de imagens no Bing.',
     'Imagens não encontradas.',
@@ -14,27 +17,38 @@ const getImages = createDataFetcher(
 );
 
 const getNews = createDataFetcher(
+    'bing',
     'news',
     'Erro ao efetuar busca de notícias no Bing.',
     'Notícias não encontradas.',
     'Erro ao buscar notícias.'
 );
 
-function createDataFetcher(endpoint, serviceErrorMessage, notFoundMessage, genericErrorMessage) {
+const getMaps = createDataFetcher(
+    'opencagedata',
+    'maps',
+    'Erro ao efetuar busca de mapas no Open Cage Data.',
+    'Mapas não encontrados.',
+    'Erro ao buscar mapas.'
+);
+
+function createDataFetcher(source, endpoint, serviceErrorMessage, notFoundMessage, genericErrorMessage) {
     return async function(attraction) { 
         try {
-            const responseBing = await getResponseService(attraction, endpoint, serviceErrorMessage)
-            let response;
+            const response = await getResponseService(source, attraction, endpoint, serviceErrorMessage)
+            let responseData;
             if (endpoint == 'images') {
-                response = imageResponse(responseBing)
+                responseData = imageResponse(response)
             } else if (endpoint == 'news') {
-                response = newsResponse(responseBing)
+                responseData = newsResponse(response)
+            } else if (endpoint == 'maps') {
+                responseData = mapsResponse(response)
             }
     
-            if (response == undefined || response.length == 0) {
+            if (responseData == undefined || responseData.length == 0) {
                 return { 'status': notFound, 'message': notFoundMessage }
             } else {
-                return { 'status': success, 'images': response }
+                return { 'status': success, 'images': responseData }
             }
         } catch (error) {
             return { 'status': serverError, 'message': genericErrorMessage }
@@ -78,17 +92,42 @@ function newsResponse(responseBing) {
     }
 }
 
-async function getResponseService(query, endpoint, messageError) {
+function mapsResponse(responseOcd) {
     try {
-        var service = {
-            method: 'get',
-            maxBodyLength: Infinity,
-            url: `${apiDomain}/${endpoint}/search?mkt=pt-BR&q=${query}`,
-            headers: { 
-              'Ocp-Apim-Subscription-Key': auth
-            }
-        };
-    
+        let listMaps = []
+
+        responseOcd.results.forEach(element => {
+            let maps = { map: element.annotations.OSM.url, place: element.formatted }
+            listMaps.push(maps)
+        })
+
+        return listMaps
+    } catch (error) {
+        console.log('Erro ao buscar mapas no Open Cage Data. Erro: ' + error.message)
+        return []
+    }
+}
+
+async function getResponseService(source, query, endpoint, messageError) {
+    try {
+        let service
+        if (source == 'bing') {
+            service = {
+                method: 'get',
+                maxBodyLength: Infinity,
+                url: `${bingDomain}/${endpoint}/search?mkt=pt-BR&q=${query}`,
+                headers: { 
+                  'Ocp-Apim-Subscription-Key': authBing
+                }
+            };
+        } else if (source == 'opencagedata') {
+            service = {
+                method: 'get',
+                maxBodyLength: Infinity,
+                url: `${ocdDomain}?language=pt-BR&pretty=1&q=${query}&key=${authOcd}`
+            };
+        }
+        
         return requestApi(service);
     } catch (error) {
         console.log(`${messageError} Erro: ${error.message}`)
@@ -111,4 +150,4 @@ function requestApi(service) {
         });
 }
 
-module.exports = { getImages, getNews }
+module.exports = { getImages, getNews, getMaps }

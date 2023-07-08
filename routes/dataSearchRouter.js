@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 const cors = require('cors');
-const { getImages, getNews } = require('../service/dataSearchService')
+const { getImages, getNews, getMaps } = require('../service/dataSearchService')
 const badRequest = 400
 const serverError = 500
 
@@ -27,5 +27,7 @@ return async function(req, res) {
 router.get('/images/:query', cors(), createRouteHandler(getImages));
 
 router.get('/news/:query', cors(), createRouteHandler(getNews));
+
+router.get('/maps/:query', cors(), createRouteHandler(getMaps));
 
 module.exports = router;
