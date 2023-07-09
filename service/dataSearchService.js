@@ -3,6 +3,7 @@ const bingDomain = process.env.API_BING
 const authBing = process.env.AUTH_BING
 const ocdDomain = process.env.API_OCD
 const authOcd = process.env.AUTH_OCD
+const hgDomain = process.env.API_HG
 const success = 200
 const notFound = 404
 const serverError = 500
@@ -32,19 +33,36 @@ const getMaps = createDataFetcher(
     'Erro ao buscar mapas.'
 );
 
+const getWeather = createDataFetcher(
+    'hgbrasil',
+    'weather',
+    'Erro ao efetuar busca de clima no HG Brasil.',
+    'Clima não encontrado.',
+    'Erro ao buscar clima.'
+);
+
 function createDataFetcher(source, endpoint, serviceErrorMessage, notFoundMessage, genericErrorMessage) {
     return async function(attraction) { 
         try {
             const response = await getResponseService(source, attraction, endpoint, serviceErrorMessage)
             let responseData;
-            if (endpoint == 'images') {
-                responseData = imageResponse(response)
-            } else if (endpoint == 'news') {
-                responseData = newsResponse(response)
-            } else if (endpoint == 'maps') {
-                responseData = mapsResponse(response)
+            switch (endpoint) {
+                case 'images':
+                    responseData = imageResponse(response)
+                    break;
+                case 'news':
+                    responseData = newsResponse(response)
+                    break;
+                case 'maps':
+                    responseData = mapsResponse(response)
+                    break;
+                case 'weather':
+                    responseData = weatherResponse(response)
+                    break;
+                default:
+                    break;
             }
-    
+
             if (responseData == undefined || responseData.length == 0) {
                 return { 'status': notFound, 'message': notFoundMessage }
             } else {
@@ -108,24 +126,56 @@ function mapsResponse(responseOcd) {
     }
 }
 
+function weatherResponse(responseHg) {
+    try {
+        let listWeek = []
+        responseHg.results.forecast.forEach(element => {
+            let day = { date: element.date, weekday: element.weekday, maxTemperature: element.max, minTemperature: element.min, description: element.description }
+            listWeek.push(day)
+        })
+
+        const response = { today: { currentTemperature: responseHg.results.temp, description: responseHg.results.description }, week: listWeek }
+
+        return response
+    } catch (error) {
+        console.log('Erro ao buscar clima no HG Brasil. Erro: ' + error.message)
+        return []
+    }
+}
+
 async function getResponseService(source, query, endpoint, messageError) {
     try {
         let service
+        switch (source) {
+            case 'bing':
+                service = {
+                    method: 'get',
+                    maxBodyLength: Infinity,
+                    url: `${bingDomain}/${endpoint}/search?mkt=pt-BR&q=${query}`,
+                    headers: { 
+                      'Ocp-Apim-Subscription-Key': authBing
+                    }
+                };
+                break;
+            case 'opencagedata':
+                service = {
+                    method: 'get',
+                    maxBodyLength: Infinity,
+                    url: `${ocdDomain}?language=pt-BR&pretty=1&q=${query}&key=${authOcd}`
+                };
+                break;
+            case 'hgbrasil':
+                service = {
+                    method: 'get',
+                    maxBodyLength: Infinity,
+                    url: `${hgDomain}/${endpoint}?format=json-cors&city_name=${query}`
+                };
+                break;
+            default:
+                break;
+        }
         if (source == 'bing') {
-            service = {
-                method: 'get',
-                maxBodyLength: Infinity,
-                url: `${bingDomain}/${endpoint}/search?mkt=pt-BR&q=${query}`,
-                headers: { 
-                  'Ocp-Apim-Subscription-Key': authBing
-                }
-            };
         } else if (source == 'opencagedata') {
-            service = {
-                method: 'get',
-                maxBodyLength: Infinity,
-                url: `${ocdDomain}?language=pt-BR&pretty=1&q=${query}&key=${authOcd}`
-            };
         }
         
         return requestApi(service);
@@ -150,4 +200,4 @@ function requestApi(service) {
         });
 }
 
-module.exports = { getImages, getNews, getMaps }
+module.exports = { getImages, getNews, getMaps, getWeather }
