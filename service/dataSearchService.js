@@ -174,9 +174,6 @@ async function getResponseService(source, query, endpoint, messageError) {
             default:
                 break;
         }
-        if (source == 'bing') {
-        } else if (source == 'opencagedata') {
-        }
         
         return requestApi(service);
     } catch (error) {
