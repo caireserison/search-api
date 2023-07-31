@@ -134,7 +134,7 @@ function weatherResponse(responseHg) {
             listWeek.push(day)
         })
 
-        const response = { today: { currentTemperature: responseHg.results.temp, description: responseHg.results.description }, week: listWeek }
+        const response = { now: { temperature: responseHg.results.temp, description: responseHg.results.description }, week: listWeek }
 
         return response
     } catch (error) {
