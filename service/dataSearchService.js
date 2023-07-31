@@ -129,6 +129,8 @@ function mapsResponse(responseOcd) {
 function weatherResponse(responseHg) {
     try {
         let listWeek = []
+        console.log('RESPONSE HG')
+        console.log(responseHg) // TODO remover
         responseHg.results.forecast.forEach(element => {
             let day = { date: element.date, weekday: element.weekday, maxTemperature: element.max, minTemperature: element.min, description: element.description }
             listWeek.push(day)
@@ -170,6 +172,8 @@ async function getResponseService(source, query, endpoint, messageError) {
                     maxBodyLength: Infinity,
                     url: `${hgDomain}/${endpoint}?format=json-cors&city_name=${query}`
                 };
+                console.log('URL HG')
+                console.log(service) // TODO remover
                 break;
             default:
                 break;
