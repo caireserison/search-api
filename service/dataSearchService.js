@@ -45,6 +45,11 @@ function createDataFetcher(source, endpoint, serviceErrorMessage, notFoundMessag
     return async function(attraction) { 
         try {
             const response = await getResponseService(source, attraction, endpoint, serviceErrorMessage)
+
+            if (response.status != null && response.status != 200) {
+                return { 'status': response.status, 'message': genericErrorMessage }
+            }
+
             let responseData;
             switch (endpoint) {
                 case 'images':
