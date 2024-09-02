@@ -46,19 +46,27 @@ function createDataFetcher(source, endpoint, serviceErrorMessage, notFoundMessag
         try {
             const response = await getResponseService(source, attraction, endpoint, serviceErrorMessage)
 
-            if (response.status != null && response.status != 200) {
-                return { 'status': response.status, 'message': genericErrorMessage }
-            }
-
             let responseData;
             switch (endpoint) {
                 case 'images':
+                    if (response.status === null || response.status != 200) {
+                        return { 'status': response.status, 'message': genericErrorMessage }
+                    }
+
                     responseData = imageResponse(response)
                     break;
                 case 'news':
+                    if (response.status === null || response.status != 200) {
+                        return { 'status': response.status, 'message': genericErrorMessage }
+                    }
+    
                     responseData = newsResponse(response)
                     break;
                 case 'maps':
+                    if (response.status === null || response.status.code != 200) {
+                        return { 'status': response.status, 'message': genericErrorMessage }
+                    }
+    
                     responseData = mapsResponse(response)
                     break;
                 case 'weather':
@@ -71,7 +79,7 @@ function createDataFetcher(source, endpoint, serviceErrorMessage, notFoundMessag
             if (responseData == undefined || responseData.length == 0) {
                 return { 'status': notFound, 'message': notFoundMessage }
             } else {
-                return { 'status': success, 'images': responseData }
+                return { 'status': success, [endpoint]: responseData }
             }
         } catch (error) {
             return { 'status': serverError, 'message': genericErrorMessage }
